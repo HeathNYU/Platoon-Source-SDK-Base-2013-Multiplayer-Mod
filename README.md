@@ -11,7 +11,7 @@ Project Showcase:
   b. This system is implemented on a 32F429IDISCOVERYMCU Discovery Development Board Embedded with ST-Link/V2 debugger
 
 Active Projects:
-1.Source SDK 2013 Mod "Platoon"
+1. Source SDK 2013 Mod "Platoon"
   a. Engine files
   b. Implemented Game Features & Fixes
 
