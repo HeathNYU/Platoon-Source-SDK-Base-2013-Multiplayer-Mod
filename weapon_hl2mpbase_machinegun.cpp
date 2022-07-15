@@ -8,9 +8,9 @@
 #include "particle_parse.h"
 
 #if defined( CLIENT_DLL )
-	#include "c_hl2mp_player.h"
+	#include "c_platoon_player.h"
 #else
-	#include "hl2mp_player.h"
+	#include "platoon_player.h"
 #endif
 
 #include "weapon_hl2mpbase_machinegun.h"
@@ -71,12 +71,6 @@ void CHL2MPMachineGun::PrimaryAttack( void )
 	if ( (UsesClipsForAmmo1() && m_iClip1 == 0) || ( !UsesClipsForAmmo1() && !pPlayer->GetAmmoCount(m_iPrimaryAmmoType) ) )
 		return;
 
-	m_nShotsFired++;
-
-	pPlayer->DoMuzzleFlash();
-
-	DispatchParticleEffect("weapon_muzzle_smoke_long", PATTACH_POINT_FOLLOW, pPlayer->GetViewModel(), "muzzle", true);
-
 	// To make the firing framerate independent, we may have to fire more than one bullet here on low-framerate systems, 
 	// especially if the weapon we're firing has a really fast rate of fire.
 	int iBulletsToFire = 0;
@@ -97,6 +91,16 @@ void CHL2MPMachineGun::PrimaryAttack( void )
 			iBulletsToFire = m_iClip1;
 		m_iClip1 -= iBulletsToFire;
 	}
+
+	m_nShotsFired++;
+
+	pPlayer->DoMuzzleFlash();
+
+	DispatchParticleEffect("weapon_muzzle_smoke_long", PATTACH_POINT_FOLLOW, pPlayer->GetViewModel(), "muzzle", true);
+
+#ifndef CLIENT_DLL
+	CSoundEnt::InsertSound(SOUND_COMBAT, GetAbsOrigin(), SOUNDENT_VOLUME_MACHINEGUN, 0.2, GetOwner());
+#endif
 
 	CHL2MP_Player *pHL2MPPlayer = ToHL2MPPlayer( pPlayer );
 
