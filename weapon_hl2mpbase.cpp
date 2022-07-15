@@ -66,27 +66,27 @@ IMPLEMENT_NETWORKCLASS_ALIASED( WeaponHL2MPBase, DT_WeaponHL2MPBase )
 BEGIN_NETWORK_TABLE( CWeaponHL2MPBase, DT_WeaponHL2MPBase )
 
 #ifdef CLIENT_DLL
-  
+
 #else
 	// world weapon models have no aminations
-  //	SendPropExclude( "DT_AnimTimeMustBeFirst", "m_flAnimTime" ),
-//	SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
-//	SendPropExclude( "DT_LocalActiveWeaponData", "m_flTimeWeaponIdle" ),
+	//	SendPropExclude( "DT_AnimTimeMustBeFirst", "m_flAnimTime" ),
+	//	SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
+	//	SendPropExclude( "DT_LocalActiveWeaponData", "m_flTimeWeaponIdle" ),
 #endif
-	
+
 END_NETWORK_TABLE()
 
-BEGIN_PREDICTION_DATA( CWeaponHL2MPBase ) 
+BEGIN_PREDICTION_DATA( CWeaponHL2MPBase )
 END_PREDICTION_DATA()
 
-LINK_ENTITY_TO_CLASS( weapon_hl2mp_base, CWeaponHL2MPBase );
+LINK_ENTITY_TO_CLASS( weapon_hl2mp_base, CWeaponHL2MPBase )
 
 
 #ifdef GAME_DLL
 
 	BEGIN_DATADESC( CWeaponHL2MPBase )
 
-	END_DATADESC()
+	END_DATADESC();
 
 #endif
 
@@ -103,7 +103,7 @@ CWeaponHL2MPBase::CWeaponHL2MPBase()
 
 
 bool CWeaponHL2MPBase::IsPredicted() const
-{ 
+{
 	return true;
 }
 
@@ -202,7 +202,7 @@ void CWeaponHL2MPBase::Materialize( void )
 
 int CWeaponHL2MPBase::ObjectCaps()
 {
-	return BaseClass::ObjectCaps() & ~FCAP_IMPULSE_USE;
+	return BaseClass::ObjectCaps();
 }
 
 #endif
@@ -407,7 +407,6 @@ bool CWeaponHL2MPBase::WeaponShouldBeLowered(void)
 
 	if (GlobalEntity_GetState("friendly_encounter") == GLOBAL_ON)
 		return true;
-
 #endif
 
 	return false;
