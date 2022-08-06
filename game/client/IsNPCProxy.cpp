@@ -59,3 +59,4 @@ void CProxyIsNPC::OnBind( void *pC_BaseEntity )
 }
 
 EXPOSE_INTERFACE( CProxyIsNPC, IMaterialProxy, "IsNPC" IMATERIAL_PROXY_INTERFACE_VERSION );
+
