@@ -1,6 +1,6 @@
-Hi, I’m @HeathNYU, and welcome to my GitHub repository.
+Hi, I’m @HeathNYU, and welcome to my GitHub page.
 
-This repository has the following contents:
+This account currently has the following repositories:
 
 Project Showcase:
 1. Minecraft Inventory System Replica in Java
