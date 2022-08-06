@@ -70,7 +70,7 @@ Vector CHL2MP_Player::GetAttackSpread( CBaseCombatWeapon *pWeapon, CBaseEntity *
 //-----------------------------------------------------------------------------
 void CHL2MP_Player::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, float fvol, bool force )
 {
-	if ( gpGlobals->maxClients > 1 && !sv_footsteps.GetFloat() )
+	if ( gpGlobals->maxClients >= 1 && !sv_footsteps.GetFloat() )
 		return;
 
 #if defined( CLIENT_DLL )
@@ -105,7 +105,7 @@ void CHL2MP_Player::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, f
 #ifndef CLIENT_DLL
 	// im MP, server removed all players in origins PVS, these players 
 	// generate the footsteps clientside
-	if ( gpGlobals->maxClients > 1 )
+	if ( gpGlobals->maxClients >= 1 )
 		filter.RemoveRecipientsByPVS( vecOrigin );
 #endif
 

@@ -87,23 +87,29 @@ IMPLEMENT_NETWORKCLASS_ALIASED(WeaponShotgun, DT_WeaponShotgun)
 BEGIN_NETWORK_TABLE(CWeaponShotgun, DT_WeaponShotgun)
 #ifdef CLIENT_DLL
 RecvPropBool(RECVINFO(m_bNeedPump)),
+RecvPropBool(RECVINFO(m_bNeedFill)),
 RecvPropBool(RECVINFO(m_bDelayedFire1)),
 RecvPropBool(RECVINFO(m_bDelayedFire2)),
 RecvPropBool(RECVINFO(m_bDelayedReload)),
+RecvPropTime(RECVINFO(m_flNextRoundFill)),
 #else
 SendPropBool(SENDINFO(m_bNeedPump)),
+SendPropBool(SENDINFO(m_bNeedFill)),
 SendPropBool(SENDINFO(m_bDelayedFire1)),
 SendPropBool(SENDINFO(m_bDelayedFire2)),
 SendPropBool(SENDINFO(m_bDelayedReload)),
+SendPropTime(SENDINFO(m_flNextRoundFill)),
 #endif
 END_NETWORK_TABLE()
 
 #ifdef CLIENT_DLL
 BEGIN_PREDICTION_DATA(CWeaponShotgun)
 DEFINE_PRED_FIELD(m_bNeedPump, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE),
+DEFINE_PRED_FIELD(m_bNeedFill, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE),
 DEFINE_PRED_FIELD(m_bDelayedFire1, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE),
 DEFINE_PRED_FIELD(m_bDelayedFire2, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE),
 DEFINE_PRED_FIELD(m_bDelayedReload, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE),
+DEFINE_PRED_FIELD_TOL(m_flNextRoundFill, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE),
 END_PREDICTION_DATA()
 #endif
 
@@ -336,12 +342,15 @@ bool CWeaponShotgun::Reload(void)
 		return false;
 	}
 
+	if (m_bNeedFill && m_iClip1 >= GetMaxClip1() - 1)
+	{
+		return false;
+	}
+
 	int j = MIN(1, pOwner->GetAmmoCount(m_iPrimaryAmmoType));
 
 	if (j <= 0)
 		return false;
-	
-	m_bNeedFill = true;
 
 	// Play reload on different channel as otherwise steals channel away from fire sound
 	WeaponSound(RELOAD);
@@ -354,8 +363,9 @@ bool CWeaponShotgun::Reload(void)
 	}
 
 	pOwner->m_flNextAttack = gpGlobals->curtime;
-	m_flNextPrimaryAttack = gpGlobals->curtime + SequenceDuration();
-	m_flNextRoundFill = gpGlobals->curtime + SequenceDuration() - 0.07;
+	m_flNextPrimaryAttack = m_flNextRoundFill = gpGlobals->curtime + SequenceDuration();
+
+	m_bNeedFill = true;
 
 	return true;
 }
@@ -399,13 +409,14 @@ void CWeaponShotgun::FillClip(void)
 	// Add them to the clip
 	if (pOwner->GetAmmoCount(m_iPrimaryAmmoType) > 0)
 	{
-		if (Clip1() < GetMaxClip1() && (m_flNextRoundFill <= gpGlobals->curtime))
+		if (Clip1() < GetMaxClip1())
 		{
 			m_iClip1++;
 			pOwner->RemoveAmmo(1, m_iPrimaryAmmoType);
-			m_bNeedFill = false;
 		}
 	}
+
+	m_bNeedFill = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -459,7 +470,7 @@ void CWeaponShotgun::PrimaryAttack(void)
 	// Only the player fires this way so we can cast
 	CBasePlayer *pPlayer = ToBasePlayer(GetOwner());
 
-	if (!pPlayer)
+	if (!pPlayer || m_bWeaponIsLowered)
 	{
 		return;
 	}
@@ -470,6 +481,7 @@ void CWeaponShotgun::PrimaryAttack(void)
 		return;
 	}
 
+	pPlayer->m_nButtons &= ~IN_ATTACK;
 	// MUST call sound before removing a round
 	WeaponSound(SINGLE);
 
@@ -524,16 +536,18 @@ void CWeaponShotgun::SecondaryAttack(void)
 	// Only the player fires this way so we can cast
 	CBasePlayer *pPlayer = ToBasePlayer(GetOwner());
 
-	if (!pPlayer)
+	if (!pPlayer || m_bWeaponIsLowered)
 	{
 		return;
 	}
 
 	pPlayer->m_nButtons &= ~IN_ATTACK2;
-	// MUST call sound before removing a round from the clip of a CMachineGun
+
 	WeaponSound(WPN_DOUBLE);
 
 	pPlayer->DoMuzzleFlash();
+
+	DispatchParticleEffect("weapon_muzzle_smoke_long", PATTACH_POINT_FOLLOW, pPlayer->GetViewModel(), "muzzle", true);
 
 	SendWeaponAnim(ACT_VM_SECONDARYATTACK);
 
@@ -580,28 +594,6 @@ void CWeaponShotgun::ItemPostFrame(void)
 		return;
 	}
 
-#ifndef CLIENT_DLL
-	CHL2MP_Player *pPlayer = ToHL2MPPlayer(GetOwner());
-	if (!pPlayer)
-		return;
-
-	if (!m_bWeaponIsLowered && pPlayer->IsSprinting() && !(pPlayer->m_nButtons & IN_ATTACK) && (pPlayer->m_nButtons & IN_FORWARD || pPlayer->m_nButtons & IN_BACK || pPlayer->m_nButtons & IN_MOVELEFT || pPlayer->m_nButtons & IN_MOVERIGHT))
-	{
-		m_bWeaponIsLowered = true;
-	}
-
-	if (m_bWeaponIsLowered && !pPlayer->IsSprinting())
-	{
-		m_bWeaponIsLowered = false;
-	}
-
-	if (pPlayer->IsSprinting() && pPlayer->m_nButtons & IN_ATTACK)
-	{
-		m_bWeaponIsLowered = false;
-		pPlayer->StopSprinting();
-	}
-#endif
-
 	if (pOwner->GetPlayerMaxSpeed() > 160 && (pOwner->m_nButtons & IN_FORWARD || pOwner->m_nButtons & IN_BACK || pOwner->m_nButtons & IN_MOVELEFT || pOwner->m_nButtons & IN_MOVERIGHT))
 	{
 		if (m_bInReload)
@@ -611,7 +603,7 @@ void CWeaponShotgun::ItemPostFrame(void)
 			m_flNextPrimaryAttack = gpGlobals->curtime;
 			return;
 		}
-		
+
 		if ((m_bNeedPump) && (m_flNextPump <= gpGlobals->curtime))
 		{
 			m_flNextPump += 0.4;
@@ -619,7 +611,32 @@ void CWeaponShotgun::ItemPostFrame(void)
 		}
 	}
 
-	if (m_bNeedFill)
+	if (!m_bWeaponIsLowered && pOwner->GetPlayerMaxSpeed() > 160 && !(pOwner->m_nButtons & IN_ATTACK) && (pOwner->m_nButtons & IN_FORWARD || pOwner->m_nButtons & IN_BACK || pOwner->m_nButtons & IN_MOVELEFT || pOwner->m_nButtons & IN_MOVERIGHT))
+	{
+		m_bWeaponIsLowered = true;
+	}
+
+	if (m_bWeaponIsLowered && pOwner->GetPlayerMaxSpeed() <= 160)
+	{
+		m_flNextPrimaryAttack = gpGlobals->curtime + 0.2;
+		m_bWeaponIsLowered = false;
+	}
+
+	if (pOwner->GetPlayerMaxSpeed() > 160 && (pOwner->m_nButtons & IN_ATTACK || (pOwner->m_nButtons & IN_ATTACK2)))
+	{
+		m_flNextPrimaryAttack = gpGlobals->curtime + 0.2;
+		m_bWeaponIsLowered = false;
+
+#ifndef CLIENT_DLL
+		CHL2MP_Player *pPlayer = ToHL2MPPlayer(GetOwner());
+		if (!pPlayer)
+			return;
+
+		pPlayer->StopSprinting();
+#endif
+	}
+
+	if (m_bNeedFill && (m_flNextRoundFill <= gpGlobals->curtime))
 	{
 		FillClip();
 	}
@@ -680,7 +697,7 @@ void CWeaponShotgun::ItemPostFrame(void)
 	}
 
 	// Shotgun uses same timing and ammo for secondary attack
-	if ((m_bDelayedFire2 || pOwner->m_nButtons & IN_ATTACK2) && (m_flNextPrimaryAttack <= gpGlobals->curtime) && !m_bNeedPump)
+	if ((m_bDelayedFire2 || pOwner->m_nButtons & IN_ATTACK2) && m_flNextPrimaryAttack <= gpGlobals->curtime && !m_bWeaponIsLowered && !m_bNeedPump)
 	{
 		m_bDelayedFire2 = false;
 		if ((m_iClip1 <= 0 && UsesClipsForAmmo1()) || (!UsesClipsForAmmo1() && !pOwner->GetAmmoCount(m_iPrimaryAmmoType)))
@@ -707,14 +724,14 @@ void CWeaponShotgun::ItemPostFrame(void)
 		else
 		{
 			// If the firing button was just pressed, reset the firing time
-			if (pOwner->m_afButtonPressed & IN_ATTACK)
+			if (!m_bWeaponIsLowered && pOwner->m_afButtonPressed & IN_ATTACK)
 			{
 				m_flNextPrimaryAttack = gpGlobals->curtime;
 			}
 			SecondaryAttack();
 		}
 	}
-	else if ((m_bDelayedFire1 || pOwner->m_nButtons & IN_ATTACK) && m_flNextPrimaryAttack <= gpGlobals->curtime && !m_bNeedPump)
+	else if ((m_bDelayedFire1 || pOwner->m_nButtons & IN_ATTACK) && m_flNextPrimaryAttack <= gpGlobals->curtime && !m_bWeaponIsLowered && !m_bNeedPump)
 	{
 		m_bDelayedFire1 = false;
 		if ((m_iClip1 <= 0 && UsesClipsForAmmo1()) || (!UsesClipsForAmmo1() && !pOwner->GetAmmoCount(m_iPrimaryAmmoType)))
@@ -733,7 +750,7 @@ void CWeaponShotgun::ItemPostFrame(void)
 		{
 			// If the firing button was just pressed, reset the firing time
 			CBasePlayer *pPlayer = ToBasePlayer(GetOwner());
-			if (pPlayer && pPlayer->m_afButtonPressed & IN_ATTACK)
+			if (pPlayer && !m_bWeaponIsLowered && pPlayer->m_afButtonPressed & IN_ATTACK)
 			{
 				m_flNextPrimaryAttack = gpGlobals->curtime;
 			}
@@ -750,7 +767,7 @@ void CWeaponShotgun::ItemPostFrame(void)
 	// -----------------------
 	//  No buttons down
 	// -----------------------
-	if (!((pOwner->m_nButtons & IN_ATTACK) || (pOwner->m_nButtons & IN_ATTACK2) || (CanReload() && pOwner->m_nButtons & IN_RELOAD)))
+	if (!(CanReload() && pOwner->m_nButtons & IN_RELOAD))
 	{
 		// no fire buttons down or reloading
 		if (!m_bInReload)

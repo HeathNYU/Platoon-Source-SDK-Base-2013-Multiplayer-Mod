@@ -318,8 +318,8 @@ void CWeaponHL2MPBase::ItemHolsterFrame(void)
 bool CWeaponHL2MPBase::Lower(void)
 {
 	//Don't bother if we don't have the animation
-	//if (SelectWeightedSequence(ACT_VM_IDLE_LOWERED) == ACTIVITY_NOT_AVAILABLE)
-		//return false;
+	if (SelectWeightedSequence(ACT_VM_IDLE_LOWERED) == ACTIVITY_NOT_AVAILABLE)
+		return false;
 
 	m_bLowered = true;
 	return true;
@@ -332,8 +332,8 @@ bool CWeaponHL2MPBase::Lower(void)
 bool CWeaponHL2MPBase::Ready(void)
 {
 	//Don't bother if we don't have the animation
-	//if (SelectWeightedSequence(ACT_VM_LOWERED_TO_IDLE) == ACTIVITY_NOT_AVAILABLE)
-		//return false;
+	if (SelectWeightedSequence(ACT_VM_LOWERED_TO_IDLE) == ACTIVITY_NOT_AVAILABLE)
+		return false;
 
 	m_bLowered = false;
 	m_flRaiseTime = gpGlobals->curtime + 0.5f;

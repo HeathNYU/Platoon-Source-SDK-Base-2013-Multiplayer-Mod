@@ -70,8 +70,8 @@ public:
 
 	virtual void	ItemHolsterFrame(void);
 
-	virtual void FireBullets( const FireBulletsInfo_t &info );
-	virtual void FallInit( void );
+	virtual void	FireBullets( const FireBulletsInfo_t &info );
+	virtual void	FallInit( void );
 	
 public:
 	#if defined( CLIENT_DLL )
